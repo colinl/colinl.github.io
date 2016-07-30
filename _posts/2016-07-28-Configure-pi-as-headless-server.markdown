@@ -7,7 +7,7 @@ categories:
 ---
 
 Many Raspberry Pi systems are required to run without a display, keyboard or mouse,
-with programming and control of the Pi being achieved via a network connection.
+with programming and control of the Pi being achieved from a PC via a network connection.
 This article describes how, starting from scratch, to setup your Pi (Zero upwards) to operate like this
 (i.e. as a Headless Server).
 
@@ -16,7 +16,8 @@ This article describes how, starting from scratch, to setup your Pi (Zero upward
 * A Raspberry Pi of any flavour, with a network connection (wifi or ethernet).
 * If you are using a Pi Zero you will need a USB Wifi or Ethernet adaptor.
 * A PSU.
-* An SD card with NOOBS installed. You can either buy a card with NOOBS pre-installed or
+* An SD card with up to date NOOBS installed (which will have Raspbian based on Debian Jessie).
+You can either buy a card with NOOBS pre-installed or
 download NOOBS and load it onto the card as described [here](https://www.raspberrypi.org/documentation/installation/noobs.md).
 * A PC on the network to connect to the Pi.
 * For initial setup you will also need to connect a display, keyboard and mouse.
@@ -132,6 +133,8 @@ on to the Pi using the `sudo` command. Run
 
     Obviously if it were eth0 that you were using then replace wlan0 with eth0.  The address against routers and
     domain_name_servers should be that of the router.
+    
+    Save using Ctrl+O then Enter, and exit with Ctrl+X
 
 Whether you have used option 1 or 2 above, now reboot using
 
