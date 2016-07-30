@@ -6,9 +6,9 @@ comments: true
 categories: 
 ---
 
-Many Rapsberry Pi applications are required to run without a display, keyboard or mouse,
-with control of the Pi being achieved via a network connection.
-This article describes how to easily setup your Pi (Zero upwards) to operate in this mode
+Many Raspberry Pi systems are required to run without a display, keyboard or mouse,
+with programming and control of the Pi being achieved via a network connection.
+This article describes how, starting from scratch, to setup your Pi (Zero upwards) to operate like this
 (i.e. as a Headless Server).
 
 # Pre-requisites
@@ -118,7 +118,7 @@ address that is outside that range (such as 192.168.1.99 in this case).  If you 
 range then you may end up with two devices with the same address which is disastrous.
 The setting has to be added to the file `/etc/dhcpcd.conf`. You can do this using your 
 favourite command line editor.  If you have not got a favourite then you can use nano which is installed 
-by default with raspbian.  This needs to be done with root permissions, which you can do on the PC whilst logged
+by default with Raspbian.  This needs to be done with root permissions, which you can do on the PC whilst logged
 on to the Pi using the `sudo` command. Run
 
     `sudo nano /etc/dhcpcd.conf`
