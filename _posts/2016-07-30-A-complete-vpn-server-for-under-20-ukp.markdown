@@ -112,18 +112,19 @@ that these are for tigger to connect to owl
     sudo -s
     cd /etc/openvpn/easy-rsa
     source ./vars
-    ./pkitool tigger_owl2
+    ./pkitool tigger_owl
     exit    
     
-This makes, in the keys subdirectory, `tigger_owl2.crt` and `tigger_owl2.key` that need to be copied to 
+This makes, in the keys subdirectory, `tigger_owl.crt` and `tigger_owl.key` that need to be copied to 
 the client along with the server key and certificate `ca.crt` and `ta.key` that the earlier process
 created.  Repeat the .pkitool line for each client.
 
 # Configure OpenVPN
 
-Disable openvpn (so it does not restart on boot) for the moment
+Disable openvpn (so it does not restart on boot) for the moment and stop it (it may not be running in fact)
 
-`sudo systemctl disable openvpn`
+    sudo systemctl disable openvpn
+    sudo systemctl stop openvpn
 
 Reboot as a check that all is well so far.  Assuming it is then edit `/etc/sysctl.conf` using
 
@@ -164,8 +165,8 @@ Now we can start the server
     sudo systemctl start openvpn
 
 Run `tail -n 50 /var/log/syslog` which will print the last 50 lines of the log and you should
-see a page full of ovpn-server messages. Provided there is nothing there that looks obviously 
-like an error then run
+see a page full of ovpn-server messages. Provided there is nothing there that suggests it is not
+starting up then run
 
     ifconfig
     
@@ -198,17 +199,17 @@ To achieve the above two things must be setup in the router
 had expected to only need to forward UDP on port 1194 but I found I had to forward both UDP and TCP. Whether 
 that is a bug in my router or is a general requirement I don't know.
 2. In order to achieve point 5 setup a static route on the router so anything addressed to 10.8.0.0
-is passed to the IP of the Pi. Look for 'Static Route' configuration in the document.
+is passed to the IP of the Pi. Look for 'Static Route' configuration in the router.
 
 On mine, for the static route I had to set
 
     Destination   10.8.0.0
     Mask          255.255.255.0
-    Gateway       192.168.49.83
+    Gateway       <pi ip address>
     
 # Testing
 
-Having installed openvpn on a server (which is not realy the focus of this article, but there are
+Having installed openvpn on a client PC or device (which is not realy the focus of this article, but there are
 some notes on this below) logon to the pi from a local PC (not the one about to be used to connect to the VPN)
 and run
 
