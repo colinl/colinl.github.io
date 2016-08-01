@@ -88,7 +88,7 @@ On a Linux PC to connect open a terminal and run
 
 `ssh pi@<ip address>`
 
-where <ip address> is the address from ifconfig above, for for example:
+where `<ip address>` is the address from ifconfig above, for for example:
 
 `ssh pi@192.168.1.105`
 
