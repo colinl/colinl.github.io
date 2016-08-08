@@ -112,12 +112,17 @@ that these are for tigger to connect to owl
     sudo -s
     cd /etc/openvpn/easy-rsa
     source ./vars
-    ./pkitool tigger_owl
+    ./pkitool --pass tigger_owl
     exit    
     
 This makes, in the keys subdirectory, `tigger_owl.crt` and `tigger_owl.key` that need to be copied to 
 the client along with the server key and certificate `ca.crt` and `ta.key` that the earlier process
-created.  Repeat the .pkitool line for each client.
+created. The option `--pass` instructs pkitool to ask for a password. The user will have to provide this
+when connecting to the VPN. If `--pass` is omitted then it will not be necessary for the user to provide the password.
+It is generally a good idea to use `--pass`, as otherwise a malicious user getting hold of the client laptop
+or mobile device may be able to access your local network.
+
+Repeat the .pkitool line for each client.
 
 # Configure OpenVPN
 
