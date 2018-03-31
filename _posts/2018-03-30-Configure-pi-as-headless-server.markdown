@@ -1,6 +1,7 @@
 ---
 layout: post
 title:  "Configure your Pi (Zero upwards) as a headless server (Stretch)"
+permalink: /pi-headless-server.html
 date:   2018-03-30 09:40:00 +0100
 comments: true
 categories: 
