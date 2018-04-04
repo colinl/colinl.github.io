@@ -13,7 +13,7 @@ Updated 2nd April 2018 for Raspbian Stretch
 This article describes how, starting from scratch, to build a complete VPN server
 based on a Pi Zero for under £20. The method will also work for other Pi models.
 
-There are many tutorials covering this but some are out of date (pre-Jessie) and some
+There are many tutorials covering this but some are out of date (pre-Stretch) and some
 assume a fair amount of knowledge about what is going on and may be tricky for the
 uninitiated to follow. I have tried to write this assuming minimum experience on the
 part of the reader and have concentrated on what to do rather than explaining the 
