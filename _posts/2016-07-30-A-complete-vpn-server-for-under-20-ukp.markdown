@@ -6,6 +6,8 @@ comments: true
 categories: 
 ---
 
+Updated 2nd April 2018 for Raspbian Stretch
+
 ![Pi Zero Server](../../../assets/pi_zero_server.jpg "Pi Zero Server")
 
 This article describes how, starting from scratch, to build a complete VPN server
@@ -23,32 +25,43 @@ is well worth a read and I learned much from it.
 # Pre-requisites
 
 * A Raspberry Pi of any flavour, with a network connection (wifi or ethernet).
-* If you are using a Pi Zero you will need a USB Wifi or Ethernet adaptor.
+* For initial setup either a wired ethernet connection or a display and keyboard. 
+To use a wired ethernet connection on a Pi Zero you will need a USB Ethernet adaptor.
 * A PSU.
-* An SD card with up to date NOOBS installed (which will have Raspbian based on Debian Jessie).
-You can either buy a card with NOOBS pre-installed or
-download NOOBS and load it onto the card as described [here](https://www.raspberrypi.org/documentation/installation/noobs.md).
-* A PC on the network to connect to the Pi.
-* For initial setup you will also need to connect a display, keyboard and mouse.
-Depending on the model of Pi you may need a USB hub to connect the keyboard and mouse.
+* An SD card with up to date with Raspbian Stretch Lite installed, you can 
+download Raspbian Lite from 
+[here](https://www.raspberrypi.org/downloads/raspbian/) 
+and load it onto the card as described in the linked installation guide. In fact it should
+be ok with the Desktop version of Raspbian installed but why would you do that?
+* A PC on the network to connect to the Pi with an ssh client. This is available
+by default on most Linux operating systems. For Windows you may need to install
+PuTTY, though I see that Windows 10 may now have an ssh client built in.
 * You might want some sort of case to put it in when it is complete
 
-# First Steps, Install Raspbian
+# First Steps, Setup the router
+
+In order to access the VPN from the internet there are two requirements. Firstly the 
+IP address of the router must be known.  Your internet connection may have a fixed name
+or ip address but more usually a service such as duckdns.org is used to get a fixed
+name.  How you set this up will depend on which service you go for.  For the examples
+here I have assumed that the host name is my_host_name.duckdns.org.
+
+Secondly you must setup port forwarding for UDP and TCP in your router so that port 1194
+is forwarded to the pi.  How you do that is dependent on the router.
+
+# Install Raspbian on the Pi
 
 We want the Pi configured as a headless server, programmed and controlled from a PC. To do this 
-follow the instructions in the article [Configure your Pi as a Headless Server]({% post_url 2016-07-28-Configure-pi-as-headless-server %}).
+follow the instructions in the article [Configure your Pi as a Headless Server]({% post_url 2018-03-30-Configure-pi-as-headless-server %}).
 You need to give the Pi a fixed IP address as described in that post.
 
-You should now have a Pi running raspbian that you can logon to from your PC
+You should now have a Pi running raspbian that you can login to from your PC
 
 # Install packages
 
 The packages openvpn and easy-rsa need to be installed, so connect to the pi and run
 
 `sudo apt install openvpn easy-rsa`
-
-I am using the recently added command `apt` here rather than `apt-get`. You can continue to use `apt-get`
-if you are more comfortable with that.
 
 # Build the server certificates and keys
 
@@ -63,7 +76,6 @@ Edit the easy-rsa variables file `/etc/openvpn/easy-rsa/vars`
 
 and adjust the key settings as follows:
 
-    export KEY_SIZE=2048
     export KEY_COUNTRY="your country"
     export KEY_PROVINCE="your province"
     export KEY_CITY="your city"
@@ -72,11 +84,12 @@ and adjust the key settings as follows:
     export KEY_OU="your organisational unit"
     
 It doesn't matter much what you put in the fields, it is just to tie the certificate back to the originator.
+Use Ctrl+O to save it and Ctrl+X to exit
 
 **Prepare to build the certificate and keys**
 
 We will use `sudo -s` here (which opens a root shell) rather than using sudo on each line as we need to 
-set environment variables (from the file vars) for successive commands.  Having entered a root shell
+set environment variables (from the file `vars`) for successive commands.  Having entered a root shell
 take care to remember to exit it so you don't accidentally do things you shouldn't!
 
     sudo -s
@@ -84,15 +97,18 @@ take care to remember to exit it so you don't accidentally do things you shouldn
     mkdir keys
     touch keys/index.txt
     echo 01 > keys/serial
+    cp openssl-1.0.0.cnf openssl.cnf  # openssl is actually 1.1.0f but this version seems to be ok
     source ./vars
     ./clean-all
 
 **Build the certs and keys**
 
-Leave all settings at default values when prompted for data below. This may take quite a long time.
+Leave all settings at default values when prompted for data below, except to say yes when 
+asked about signing the certificate. This may take a very long time, particularly on a low 
+powered pi, several cups of coffee and an afternoon nap may well be in order.
 
     ./build-ca
-    ./build-key-server server
+    ./build-key-server server    # reply yes when asked to sign the key
     ./build-dh
     cd keys
     openvpn --genkey --secret ta.key
@@ -102,34 +118,7 @@ copy server.crt server.key ca.crt dh2048.pem ta.key from /etc/openvpn/easy-rsa/k
     cp {server.crt,server.key,ca.crt,dh2048.pem,ta.key} /etc/openvpn/
     exit
 
-# Make the keys and certificates for the clients
- 
-For each client device that you want to be able to connect to the VPN (laptop, phone etc) you need
-to make a set of keys and certificates.  You have to give each of the sets a name.  In this example
-the server is called owl and the client tigger. I am using the name tigger_owl so I can remember 
-that these are for tigger to connect to owl  
-
-    sudo -s
-    cd /etc/openvpn/easy-rsa
-    source ./vars
-    ./pkitool --pass tigger_owl
-    exit    
-    
-This makes, in the keys subdirectory, `tigger_owl.crt` and `tigger_owl.key` that need to be copied to 
-the client along with the server key and certificate `ca.crt` and `ta.key` that the earlier process
-created. The option `--pass` instructs pkitool to ask for a password. The user will have to provide this
-when connecting to the VPN. If `--pass` is omitted then it will not be necessary for the user to provide the password.
-It is generally a good idea to use `--pass`, as otherwise a malicious user getting hold of the client laptop
-or mobile device may be able to access your local network.
-
-Repeat the .pkitool line for each client.
-
 # Configure OpenVPN
-
-Disable openvpn (so it does not restart on boot) for the moment and stop it (it may not be running in fact)
-
-    sudo systemctl disable openvpn
-    sudo systemctl stop openvpn
 
 Reboot as a check that all is well so far.  Assuming it is then edit `/etc/sysctl.conf` using
 
@@ -144,8 +133,10 @@ remove the # at the start (to un-comment that line), save the file and exit.
 To prepare the server configuration file `etc/openvpn/server/conf` we start with the one from
 `/usr/share/doc/openvpn/examples/sample-config-files/server.conf.gz` as follows
 
-    sudo gunzip -c /usr/share/doc/openvpn/examples/sample-config-files/server.conf.gz > /etc/openvpn/server.conf
-    sudo nano /etc/openvpn/server.conf
+    sudo -s
+    gunzip -c /usr/share/doc/openvpn/examples/sample-config-files/server.conf.gz > /etc/openvpn/service.conf
+    exit
+    sudo nano /etc/openvpn/service.conf
     
 Find the line
 
@@ -153,21 +144,23 @@ Find the line
 
 and change it to
 
-`dh 2048.pem`.
+`dh dh2048.pem`
 
 In fact it may already be that.
 
-Uncomment, by removing the # at the front, the lines (which are not together in the file)
+Uncomment, by removing the # or ; if present at the front, from these lines (which are not together in the file)
 
+    comp-lzo
     push "redirect-gateway def1 bypass-dhcp"
     tls-auth ta.key 0
     user nobody
     group nogroup
     mute 20
 
-Now we can start the server
+Now we can start the server, it is necessary to start two services in Stretch
     
-    sudo systemctl start openvpn
+    sudo systemctl restart openvpn
+    sudo systemctl restart openvpn@service
 
 Run `tail -n 50 /var/log/syslog` which will print the last 50 lines of the log and you should
 see a page full of ovpn-server messages. Provided there is nothing there that suggests it is not
@@ -183,39 +176,89 @@ The log /var/log/daemon.log may have useful information also.
 To setup openvpn so that it automatically starts on boot, run
 
     sudo systemctl enable openvpn
+    sudo systemctl enable openvpn@service
+
+# Configure iptables
+
+For the vpn to work, iptables must be configured appropriately to forward data to the correct 
+destinations.  I prefer to keep iptables configuration in `/etc/rc.local' which is executed on startup.
+To do it this way edit the file
+  
+    sudo nano /etc/rc.local
     
-That completes setting up the Pi.
+and add to the end
 
-# Setup the router
+```
+# flush current iptable rules so this can be run at any time to restore rules
+# though note that this may clear rules set elsewhere
+sudo iptables -F
+sudo iptables -t nat -F
+sudo iptables -X
 
-The flow of data through the VPN is (more or less) as follows:
+# for vpn
+iptables -A FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -s 10.8.0.0/24 -j ACCEPT
+iptables -A FORWARD -j REJECT
+iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE
+```
 
-1. Client sends data addressed to the external IP of the server's router.
-2. The router passes it on to the server (Pi).
-3. The server decodes it and sends the request on the intended recipient with a return address
-(if it is configured as above) of 10.8.0.0
-4. The recipient receives the request and sends the reply via the server's router addressed to 10.8.0.0
-5. The server's router passes it on to the server
-6. The server sends it back to the client.
+To invoke this manually, in a terminal run
 
-To achieve the above two things must be setup in the router
+    sudo /etc/rc.local
+    
+# Make the keys and certificates for the clients
+ 
+For each client device that you want to be able to connect to the VPN (laptop, phone etc) you need
+to make a set of keys and certificates.  You have to give each of the sets a name.  In this example
+the server is called owl and the client tigger. I am using the name tigger_owl so I can remember 
+that these are for tigger to connect to owl  
 
-1. Port forwarding of port 1194 to the fixed IP of the Pi. Since we have configured the VPN to use UDP I
-had expected to only need to forward UDP on port 1194 but I found I had to forward both UDP and TCP. Whether 
-that is a bug in my router or is a general requirement I don't know.
-2. In order to achieve point 5 setup a static route on the router so anything addressed to 10.8.0.0
-is passed to the IP of the Pi. Look for 'Static Route' configuration in the router.
+    sudo -s
+    cd /etc/openvpn/easy-rsa
+    source ./vars
+    ./pkitool --pass tigger_owl
+    exit    
+    
+This makes, in the keys subdirectory, `tigger_owl.crt` and `tigger_owl.key` that 
+the client will need to connect to the VPN. The client will also need the server key and certificate 
+`ca.crt` and `ta.key` that the earlier process
+created. The option `--pass` instructs pkitool to ask for a password (PEM pass phrase). The user will have to provide this
+when connecting to the VPN. If `--pass` is omitted then it will not be necessary for the user to provide the password.
+It is generally a good idea to use `--pass`, as otherwise a malicious user getting hold of the client laptop
+or mobile device may be able to access your local network.
 
-On mine, for the static route I had to set
+Many client applications can be given a combined ovpn configuration file rather than the individual files.
+In order to construct an ovpn file create a file called ovpn_generate.sh in /etc/openvpn/easy-rsa/keys containing
+the script that can be found a the end of this blog.  This can be done using
 
-    Destination   10.8.0.0
-    Mask          255.255.255.0
-    Gateway       <pi ip address>
+    sudo -s
+    cd /etc/openvpn/easy-rsa/keys
+    sudo nano ovpn_generate.sh
+
+and pasting the script into that (use Ctrl+Shift+V to copy into nano which is a terminal application). Then save it and exit
+from nano.  To make it executable run
+
+    chmod +x ovpn_generate.sh
+    
+Then to create the ovpn file for the example above where the client is called tigger and the server owl, if the domain name
+of the vpn were, for example, my_host_name.duckdns.org, run
+
+    ./ovpn_generate.sh tigger_owl my_host_name.duckdns.org
+    
+Don't forget to run
+
+    exit
+    
+to leave root shell.
+
+Repeat the .pkitool line (and ovpn_generate if required) for each client.
+
     
 # Testing
 
 Having installed openvpn on a client PC or device (which is not realy the focus of this article, but there are
-some notes on this below) logon to the pi from a local PC (not the one about to be used to connect to the VPN)
+some notes on this below) login to the pi from a local PC (preferably not the one about to be used to connect to the VPN,
+but if you have not got another device then it will probably be ok)
 and run
 
 `tail -f /var/log/syslog`
@@ -223,63 +266,99 @@ and run
 Then connect from the client device.  The log should show the sequence of connection. If the client cannot connect
 then there may be some useful messages there.
 
+That's it. All done.
+
 # Performance
 
 I was concerned as to whether a Pi Zero had the horsepower to provide a useful VPN, however my tests gave a throughput 
 rate of 10Mbps which is plenty for my purposes. My Pi uses a Wifi link and my Wifi hub is old and a bit flaky so it may
 well be that this limit was imposed by the Wifi and not by the Pi.  All the data has to be received by the Pi and then
-re-transmitted so 10Mbps throught the server implies 20Mbps across the Wifi. Unfortunately I have not got a USB 
-Ethernet adaptor so am not able to test it wired.
+re-transmitted so 10Mbps throught the server implies 20Mbps across the Wifi.
 
-# Setting up OpenVPN client on Ubuntu
+# Script for ovpn_generate.sh
 
-Setting up the clients is not the focus of this article but in case it is useful to anyone 
-here are some notes on setting it up on Ubuntu 16.04
+```
+#!/bin/bash
 
-`sudo apt install network-manager-openvpn`
+##
+## Usage: ./ovpn_generate.sh key_name server
+##        e.g. ./ovpn_generate tigger_owl clanlaw.duckdns.org 
+##        Run from the folder containing the certificates and keys
+##
 
-* On the Network icon in the top panel select VPN > Configure VPN
-* Click Add
-* Type OpenVPN
-* Create...
-* Connection Name: Some Name
-* Gateway `<external ip address or domain name of server's router>`
-* Authentication TLS
-* User certificate `<client_server>.crt`
-* CA certificate `<server_ca>.crt`
-* Private key `<client_server>.key`
-* No password for key
+# given a name used to identify the key and a server host name or ip address it builds the file key_name.ovpn
+# it expects to find in the current directory the files ca.crt, key_name.crt, key_name.key and ta.key.
+# see http://blog.clanlaw.org.uk/2016/07/30/A-complete-vpn-server-for-under-20-ukp.html for more details of usage
 
-* Advanced:
-* On Advanced > General:
-* Use LZO compression
-* On Advanced > TLS Authentication
-* Additional TLS authentication using `<server_ta>.key`, direction 1
-* Save
 
-# Setting up OpenVPN client on Android
+key_name=${1?"The key name is required"}
+server=${2?"The server host name or ip address is required"}
 
-Again this is not the focus of this article, but in case anyone finds it useful, this is what I did.
+cacert="ca.crt"
+client_cert="${key_name}.crt"
+client_key="${key_name}.key"
+tls_key="ta.key"
+out_file="${key_name}.ovpn"
 
-I used the app [OpenVPN for Android](https://play.google.com/store/apps/details?id=de.blinkt.openvpn)
+if [ ! -e "${cacert}" ]
+then
+    echo "File ${cacert} not found"
+    exit
+fi
+if [ ! -e "${client_cert}" ]
+then
+    echo "File ${client_cert} not found"
+    exit
+fi
+if [ ! -e "${client_key}" ]
+then
+    echo "File ${client_key} not found"
+    exit
+fi
+if [ ! -e "${tls_key}" ]
+then
+    echo "File ${tls_key} not found"
+    exit
+fi
 
-First make client keys and certificate as described earlier, in my case I named them phone_owl.crt, etc.
+echo "Building ${out_file} for ${server} from ${tls_key}, ${cacert}, ${client_cert} and ${client_key}"
 
-Use [this script](http://codegists.com/snippet/shell/ovpn-writersh_boeingx_shell) to generate an ovpn file
-by running
-
-`script.sh <external ip address of server's router> ca.crt phone_owl.crt phone_owl.key ta.key > phone_owl.ovpn`
-
-Copy that file to (for example) the Downloads folder on the Android device.
-
-On the Android device start the OpenVPN app.
-
-* Click the Folder with the down arrow in it in the top panel
-* Find and open the ovpn file
-* Give the VPN network an appropriate name
-* Click the tick in the top panel
-
-You should now be able to connect to the VPN. Delete the ovpn file from Downloads.
+cat > ${out_file} << EOF
+client
+dev tun
+remote ${server}
+nobind
+persist-key
+persist-tun
+verb 1
+port 1194
+proto udp
+cipher BF-CBC
+comp-lzo
+remote-cert-tls server
+key-direction 1
+<ca>
+EOF
+cat >> ${out_file} ${cacert}
+cat >> ${out_file} << EOF
+</ca>
+<cert>
+EOF
+cat >> ${out_file} ${client_cert}
+cat >> ${out_file} << EOF
+</cert>
+<key>
+EOF
+cat >> ${out_file} ${client_key}
+cat >> ${out_file} << EOF
+</key>
+<tls-auth>
+EOF
+cat >> ${out_file} ${tls_key}
+cat >> ${out_file} << EOF
+</tls-auth>
+EOF
+```
 
 
 
