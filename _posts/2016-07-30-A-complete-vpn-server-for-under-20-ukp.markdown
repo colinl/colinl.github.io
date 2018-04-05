@@ -6,7 +6,7 @@ comments: true
 categories: 
 ---
 
-Updated 2nd April 2018 for Raspbian Stretch
+Updated 5th April 2018 for Raspbian Stretch
 
 ![Pi Zero Server](../../../assets/pi_zero_server.jpg "Pi Zero Server")
 
