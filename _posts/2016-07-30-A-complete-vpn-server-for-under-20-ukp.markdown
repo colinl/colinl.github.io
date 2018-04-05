@@ -150,12 +150,16 @@ In fact it may already be that.
 
 Uncomment, by removing the # or ; if present at the front, from these lines (which are not together in the file)
 
+    topology subnet
     comp-lzo
     push "redirect-gateway def1 bypass-dhcp"
     tls-auth ta.key 0
     user nobody
     group nogroup
     mute 20
+    
+In addition find the two lines starting `;push dhcp-option DNS ....`, remove the semi-colons and (if you want)
+change the ip addresses to the DNS servers of your choice.
 
 Now we can start the server, it is necessary to start two services in Stretch
     
@@ -186,7 +190,7 @@ To do it this way edit the file
   
     sudo nano /etc/rc.local
     
-and add to the end
+and this to the end.  Note the lines at the end, choose either the eth0 or wlan0 line
 
 ```
 # flush current iptable rules so this can be run at any time to restore rules
@@ -199,7 +203,11 @@ sudo iptables -X
 iptables -A FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
 iptables -A FORWARD -s 10.8.0.0/24 -j ACCEPT
 iptables -A FORWARD -j REJECT
+# if using wired ethernet then include this line
 iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE
+# if using wifi then comment out above and uncomment this one
+#iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o wlan0 -j MASQUERADE
+
 ```
 
 To invoke this manually, in a terminal run
@@ -333,7 +341,7 @@ persist-tun
 verb 1
 port 1194
 proto udp
-cipher BF-CBC
+cipher AES-256-CBC
 comp-lzo
 remote-cert-tls server
 key-direction 1
