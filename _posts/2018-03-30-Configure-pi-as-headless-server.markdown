@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Configure your Pi (Zero upwards) as a headless server (Stretch)"
+title:  "Configure your Pi (Zero upwards) as a headless server (Buster)"
 permalink: /pi-headless-server.html
 date:   2018-03-30 09:40:00 +0100
 comments: true
@@ -18,7 +18,7 @@ This article describes how, starting from scratch, to setup your Pi (Zero upward
 * For initial setup either a wired ethernet connection or a display and keyboard. 
 To use a wired ethernet connection on a Pi Zero you will need a USB Ethernet adaptor.
 * A PSU.
-* An SD card with up to date with Raspbian Stretch Lite installed, you can 
+* An SD card with up to date with Raspbian Buster Lite installed, you can 
 download Raspbian Lite from 
 [here](https://www.raspberrypi.org/downloads/raspbian/) 
 and load it onto the card as described in the linked installation guide.
@@ -52,7 +52,7 @@ you will find the pi along with the IP address the router has given it. Then run
 haven't got another pi with the same host name (ie computer name), which is raspberrypi,
 on the network.  If you have you will either have to disconnect it or change its
 host name.
-* Once you have managed to login the run `raspi-config` and carry on as described below.
+* Once you have managed to login the run `sudo raspi-config` and carry on as described below.
 
 # First Steps, initial configuration using keyboard and display
 
@@ -75,8 +75,8 @@ Enter to make a selection and Tab to move to other fields.
 * First you should change the default password, select that option and follow the instructions.
 * Next setup the network. Change the computer name (Hostname) to something other than
 the default of raspberrypi.
-* It is probably a good idea to reboot at this point (you will be given this option
-on leaving network setup in order to make sure those changes have taken.
+* It is probably a good idea to reboot at this point in order to make sure those changes 
+have taken (click `Finish` in raspi-config and you will be given an option to reboot).
 * Having rebooted you should now be able to login with your new password, if connecting
 via ssh then use `ssh pi@host_name.local` where host_name is the name you gave it above.
 * run `sudo rasp-config` again.
@@ -85,17 +85,17 @@ for your region has been automatically selected. There will be a * against the
 selected one (for me in the UK this is en_GB.UTF8). Then setup the timezone.
 * If you want to use wifi to connect then in Network Options select Wifi and follow the 
 instructions.  Take care to enter the SSID and key correctly.
-* When complete exit raspi-config and run `ifconfig`. You should see the wifi interface
+When complete exit raspi-config and run `ifconfig`. You should see the wifi interface
 `wlan0: ` and on the line below that it should show `inet nnn.nnn.nnn.nnn` where that is the ip 
 address the router has allocated it on the wifi. If the inet line does not appear 
 then it has not connected to the wifi.
-* Assuming that it has connected then if you have been using an ethernet connection 
+Assuming that it has connected then if you have been using an ethernet connection 
 shutdown (using `sudo halt`), remove the
 ethernet connection, and power up again. You should now be able to connect again via
 ssh but now it will use the wifi connection.
 * If you have been using a keyboard and display then you should now be able to connect
 from your PC via wifi using ssh as described above in First Steps using an ethernet 
-connection.  Assuming that works you can shutdwown (`sudo halt`), disconnect the 
+connection.  Assuming that works you can shutdown (`sudo halt`), disconnect the 
 keyboard and display and put them away in the cupboard, you should not need them again.
 
 # Optional - Set a fixed IP address
@@ -165,7 +165,7 @@ At some point it is a good idea to update all the software to the latest. This w
 time (dependent on your internet speed and on which model the Pi is), possibly an hour or more,
 so you can do this now or leave it till later if you like.  To update:
 
-`sudo apt update && sudo apt upgrade`
+`sudo apt update && sudo apt full-upgrade`
 
 The first command updates the database describing which version of each package is available, and the
 second downloads the packages and updates the software.  There has been a problem with updating the bluetooth 
