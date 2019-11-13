@@ -161,6 +161,15 @@ Uncomment, by removing the # or ; if present at the front, from these lines (whi
 In addition find the two lines starting `;push dhcp-option DNS ....`, remove the semi-colons and (if you want)
 change the ip addresses to the DNS servers of your choice.
 
+Some public wifi access points block port 1194, which is the standard VPN port.  If you would like to change that then
+find the line
+
+    port 1194
+
+in that file and change it to the port you prefer.  If you do that you will also have to forward that port in the
+router instead of 1194 and if you use the ovpn_generate script at the end of the blog you will have to change it
+in the script too. 
+
 Now we can start the server, it is necessary to start two services
     
     sudo systemctl restart openvpn
