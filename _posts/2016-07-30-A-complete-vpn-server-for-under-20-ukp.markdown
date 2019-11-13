@@ -1,19 +1,20 @@
 ---
 layout: post
 title:  "A complete Pi based VPN Server for under £20"
+permalink: /pi-vpn-server.html
 date:   2016-07-30 15:59:40 +0100
 comments: true
 categories: 
 ---
 
-Updated 5th April 2018 for Raspbian Stretch
+Updated 9th November 2019 for Raspbian Buster
 
 ![Pi Zero Server](../../../assets/pi_zero_server.jpg "Pi Zero Server")
 
 This article describes how, starting from scratch, to build a complete VPN server
 based on a Pi Zero for under £20. The method will also work for other Pi models.
 
-There are many tutorials covering this but some are out of date (pre-Stretch) and some
+There are many tutorials covering this but some are out of date (pre-Buster) and some
 assume a fair amount of knowledge about what is going on and may be tricky for the
 uninitiated to follow. I have tried to write this assuming minimum experience on the
 part of the reader and have concentrated on what to do rather than explaining the 
@@ -28,7 +29,7 @@ is well worth a read and I learned much from it.
 * For initial setup either a wired ethernet connection or a display and keyboard. 
 To use a wired ethernet connection on a Pi Zero you will need a USB Ethernet adaptor.
 * A PSU.
-* An SD card with up to date with Raspbian Stretch Lite installed, you can 
+* An SD card with up to date with Raspbian Buster Lite installed, you can 
 download Raspbian Lite from 
 [here](https://www.raspberrypi.org/downloads/raspbian/) 
 and load it onto the card as described in the linked installation guide. In fact it should
@@ -70,52 +71,53 @@ Run the following commands to create the easy-rsa directory and copy the sample 
     sudo mkdir /etc/openvpn/easy-rsa
     sudo cp /usr/share/easy-rsa/* /etc/openvpn/easy-rsa
     
-Edit the easy-rsa variables file `/etc/openvpn/easy-rsa/vars`
-    
+Copy the easy-rsa example vars file
+
+`sudo cp /etc/openvpn/easy-rsa/vars.example /etc/openvpn/easy-rsa/vars`
+
+The default certificate expiry time is ten years for the CA certificate but only three for the others.  If you want to change either of those then edit the copied file `/etc/openvpn/easy-rsa/vars`
+
 `sudo nano /etc/openvpn/easy-rsa/vars`
 
-and adjust the key settings as follows:
+find the lines setting defining those settings (which are in days)
 
-    export KEY_COUNTRY="your country"
-    export KEY_PROVINCE="your province"
-    export KEY_CITY="your city"
-    export KEY_ORG="your organisation"
-    export KEY_EMAIL="your email"
-    export KEY_OU="your organisational unit"
-    
-It doesn't matter much what you put in the fields, it is just to tie the certificate back to the originator.
-Use Ctrl+O to save it and Ctrl+X to exit
+    # In how many days should the root CA key expire?
+    #set_var EASYRSA_CA_EXPIRE      3650
+    # In how many days should certificates expire?
+    #set_var EASYRSA_CERT_EXPIRE    1080
+
+then to change either of them remove the '#' characters to uncomment the appropriate line and set the values as you desire and use Ctrl+S to save it and Ctrl+X to exit.  So for example to set the certifacte expiry period to 10 years change that line to
+
+    set_var EASYRSA_CERT_EXPIRE    3650
 
 **Prepare to build the certificate and keys**
 
-We will use `sudo -s` here (which opens a root shell) rather than using sudo on each line as we need to 
-set environment variables (from the file `vars`) for successive commands.  Having entered a root shell
-take care to remember to exit it so you don't accidentally do things you shouldn't!
+Create an empty directory structure for the keys, /etc/openvpn/easy-rsa/pki, using the easyrsa command.
 
-    sudo -s
     cd /etc/openvpn/easy-rsa/
-    mkdir keys
-    touch keys/index.txt
-    echo 01 > keys/serial
-    cp openssl-1.0.0.cnf openssl.cnf  # openssl is actually 1.1.0f but this version seems to be ok
-    source ./vars
-    ./clean-all
+    sudo ./easyrsa init-pki
 
-**Build the certs and keys**
+**Build the certificates and keys**
 
 Leave all settings at default values when prompted for data below, except to say yes when 
-asked about signing the certificate. This may take a very long time, particularly on a low 
+asked about signing the certificate. `gen-dh` in particular may take a very long time, particularly on a low 
 powered pi, several cups of coffee and an afternoon nap may well be in order.
 
-    ./build-ca
-    ./build-key-server server    # reply yes when asked to sign the key
-    ./build-dh
-    cd keys
-    openvpn --genkey --secret ta.key
+    sudo ./easyrsa build-ca
+    sudo ./easyrsa gen-req server nopass    # accept the default [server] when prompted
+    sudo ./easyrsa sign-req server server
+    sudo ./easyrsa gen-dh
+    sudo openvpn --genkey --secret ta.key
 
-copy server.crt server.key ca.crt dh2048.pem ta.key from /etc/openvpn/easy-rsa/keys to /etc/openvpn/
+copy ta.key from /etc/openvpn/easy-rsa to /etc/openvpn/  
+copy ca.crt dh.pem from /etc/openvpn/easy-rsa/pki to /etc/openvpn/  
+copy server.crt from /etc/openvpn/easy-rsa/pki/issued to /etc/openvpn/  
+copy server.key from /etc/openvpn/easy-rsa/pki/private to /etc/openvpn/  
 
-    cp {server.crt,server.key,ca.crt,dh2048.pem,ta.key} /etc/openvpn/
+    sudo cp ta.key /etc/openvpn/
+    sudo cp pki/{ca.crt,dh.pem} /etc/openvpn/
+    sudo cp pki/issued/server.crt /etc/openvpn/
+    sudo cp pki/private/server.key /etc/openvpn/
     exit
 
 # Configure OpenVPN
@@ -130,7 +132,7 @@ Find the line
 
 remove the # at the start (to un-comment that line), save the file and exit.
 
-To prepare the server configuration file `etc/openvpn/server/conf` we start with the one from
+To prepare the server configuration file `etc/openvpn/service.conf` we start with the one from
 `/usr/share/doc/openvpn/examples/sample-config-files/server.conf.gz` as follows
 
     sudo -s
@@ -140,13 +142,11 @@ To prepare the server configuration file `etc/openvpn/server/conf` we start with
     
 Find the line
 
-`dh dh1024.pem`
+`dh dh2048.pem`
 
 and change it to
 
-`dh dh2048.pem`
-
-In fact it may already be that.
+`dh dh.pem`
 
 Uncomment, by removing the # or ; if present at the front, from these lines (which are not together in the file)
 
@@ -161,7 +161,7 @@ Uncomment, by removing the # or ; if present at the front, from these lines (whi
 In addition find the two lines starting `;push dhcp-option DNS ....`, remove the semi-colons and (if you want)
 change the ip addresses to the DNS servers of your choice.
 
-Now we can start the server, it is necessary to start two services in Stretch
+Now we can start the server, it is necessary to start two services
     
     sudo systemctl restart openvpn
     sudo systemctl restart openvpn@service
@@ -190,7 +190,7 @@ To do it this way edit the file
   
     sudo nano /etc/rc.local
     
-and this to the end.  Note the lines at the end, choose either the eth0 or wlan0 line
+and this just before the `exit 0` at the end.  Note the last lines below, choose either the eth0 or wlan0 line
 
 ```
 # flush current iptable rules so this can be run at any time to restore rules
@@ -221,53 +221,49 @@ to make a set of keys and certificates.  You have to give each of the sets a nam
 the server is called owl and the client tigger. I am using the name tigger_owl so I can remember 
 that these are for tigger to connect to owl  
 
-    sudo -s
     cd /etc/openvpn/easy-rsa
-    source ./vars
-    ./pkitool --pass tigger_owl
-    exit    
+    sudo ./easyrsa gen-req tigger_owl
     
-This makes, in the keys subdirectory, `tigger_owl.crt` and `tigger_owl.key` that 
-the client will need to connect to the VPN. The client will also need the server key and certificate 
-`ca.crt` and `ta.key` that the earlier process
-created. The option `--pass` instructs pkitool to ask for a password (PEM pass phrase). The user will have to provide this
-when connecting to the VPN. If `--pass` is omitted then it will not be necessary for the user to provide the password.
-It is generally a good idea to use `--pass`, as otherwise a malicious user getting hold of the client laptop
+This will ask for a PEM pass phrase that the user will have to provide when connecting to the VPN.  If `nopass` 
+is added to the gen-req command line then it will not be necessary for the user to provide the password.
+It is generally not a good idea to use `nopass`, as that would mean that a malicious user getting hold of the client laptop
 or mobile device may be able to access your local network.
 
+Next run the command (replacing tigger_owl with your chosen key name obviously)
+
+    sudo ./easyrsa sign-req client tigger_owl
+    
+The command will ask you to provide the pass phrase that you entered when creating the CA certificate in the 
+section "Build the certificates and keys" earlier.  
+This makes, in the pki/issued subdirectory, `tigger_owl.crt` that 
+the client will need to connect to the VPN. The client will also need the server key and certificate 
+`ca.crt` and `ta.key` that the earlier process created and that we copied to /etc/openvpn.
+
 Many client applications can be given a combined ovpn configuration file rather than the individual files.
-In order to construct an ovpn file create a file called ovpn_generate.sh in /etc/openvpn/easy-rsa/keys containing
+In order to construct an ovpn file create a file called ovpn_generate.sh in /etc/openvpn/easy-rsa containing
 the script that can be found a the end of this blog.  This can be done using
 
-    sudo -s
-    cd /etc/openvpn/easy-rsa/keys
+    cd /etc/openvpn/easy-rsa
     sudo nano ovpn_generate.sh
 
 and pasting the script into that (use Ctrl+Shift+V to copy into nano which is a terminal application). Then save it and exit
 from nano.  To make it executable run
 
-    chmod +x ovpn_generate.sh
+    sudo chmod +x ovpn_generate.sh
     
 Then to create the ovpn file for the example above where the client is called tigger and the server owl, if the domain name
 of the vpn were, for example, my_host_name.duckdns.org, run
 
-    ./ovpn_generate.sh tigger_owl my_host_name.duckdns.org
+    cd /etc/openvpn/easy-rsa
+    sudo ./ovpn_generate.sh tigger_owl my_host_name.duckdns.org
     
-Don't forget to run
-
-    exit
-    
-to leave root shell.
-
-Repeat the .pkitool line (and ovpn_generate if required) for each client.
+Repeat the gen-req and sign-req commands (and ovpn_generate if required) for each client.
 
     
 # Testing
 
-Having installed openvpn on a client PC or device (which is not realy the focus of this article, but there are
-some notes on this below) login to the pi from a local PC (preferably not the one about to be used to connect to the VPN,
-but if you have not got another device then it will probably be ok)
-and run
+Having configured an openvpn client on a PC or device, login to the pi from a local PC (preferably not the one about to be used to
+connect to the VPN,but if you have not got another device then it will probably be ok) and run
 
 `tail -f /var/log/syslog`
 
@@ -289,24 +285,29 @@ re-transmitted so 10Mbps throught the server implies 20Mbps across the Wifi.
 #!/bin/bash
 
 ##
-## Usage: ./ovpn_generate.sh key_name server
-##        e.g. ./ovpn_generate tigger_owl clanlaw.duckdns.org 
-##        Run from the folder containing the certificates and keys
+## Usage: sudo ./ovpn_generate.sh key_name server
+##        e.g. sudo ./ovpn_generate tigger_owl myhostname.duckdns.org 
 ##
 
-# given a name used to identify the key and a server host name or ip address it builds the file key_name.ovpn
-# it expects to find in the current directory the files ca.crt, key_name.crt, key_name.key and ta.key.
-# see http://blog.clanlaw.org.uk/2016/07/30/A-complete-vpn-server-for-under-20-ukp.html for more details of usage
+# Given a name used to identify the key and a server host name or ip address
+# it builds the file /etc/openvpn/easy-rsa/pki/key_name.ovpn
+# Run with sudo after generating keys and certificates
+# see http://blog.clanlaw.org.uk/pi-vpn-server.html for more details of usage
 
+if [ "$EUID" -ne 0 ]
+  then echo "Must be run with sudo"
+  exit
+fi
 
 key_name=${1?"The key name is required"}
 server=${2?"The server host name or ip address is required"}
 
-cacert="ca.crt"
-client_cert="${key_name}.crt"
-client_key="${key_name}.key"
+cd /etc/openvpn/easy-rsa
+cacert="pki/ca.crt"
+client_cert="pki/issued/${key_name}.crt"
+client_key="pki/private/${key_name}.key"
 tls_key="ta.key"
-out_file="${key_name}.ovpn"
+out_file="pki/${key_name}.ovpn"
 
 if [ ! -e "${cacert}" ]
 then

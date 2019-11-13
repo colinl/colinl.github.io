@@ -1,6 +1,7 @@
 ---
 layout: post
 title:  "PID loop tuning using node-red-contrib-pid in node red"
+permalink: /pid-loop-tuning.html
 date:   2018-01-09 11:17:00 +0000
 comments: true
 categories: 
