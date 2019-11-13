@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "A complete Pi based VPN Server for under £20"
+title:  "A complete Pi based VPN Server for under £20 (Buster)"
 permalink: /pi-vpn-server.html
 date:   2016-07-30 15:59:40 +0100
 comments: true
