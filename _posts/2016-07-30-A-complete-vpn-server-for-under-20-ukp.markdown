@@ -23,6 +23,10 @@ excellent tutorial by Lauren Orsini at
 [readwrite.com](http://readwrite.com/2014/04/10/raspberry-pi-vpn-tutorial-server-secure-web-browsing/)
 is well worth a read and I learned much from it.
 
+Before you start, check whether your router can operate as a VPN server.
+Many modern modems can do that and if yours can then it is likely that it would be
+better to use that rather than use a Pi.
+
 # Pre-requisites
 
 * A Raspberry Pi of any flavour, with a network connection (wifi or ethernet).
